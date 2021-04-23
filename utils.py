@@ -1,13 +1,11 @@
 import numpy as np  # linear algebra
 import pandas as pd  # CSV file
 import scipy.io.wavfile as sci_wav  # Open wav files
-import matplotlib.pyplot as plt
-import numpy as np
 import random
 
 
-ROOT_DIR = '../input/cats_dogs/'
-CSV_PATH = '../input/train_test_split.csv'
+ROOT_DIR = 'cats_dogs/'
+CSV_PATH = 'train_test_split.csv'
 
 
 def read_wav_files(wav_files):
@@ -104,7 +102,7 @@ def dataset_gen(is_train=True, batch_shape=(20, 16000), sample_augmentation=0):
                y_batch.reshape(-1, 1))
 
 
-def load_dataset(dataframe):
+def load_dataset():
     '''Load the dataset in a dictionary.
     From the dataframe, it reads the [train_cat, train_dog, test_cat, test_dog]
     columns and loads their corresponding arrays into the <dataset> dictionary
@@ -122,7 +120,7 @@ def load_dataset(dataframe):
             'test_dog': [[sound 1],[sound 2],...]
         }
     '''
-    df = dataframe
+    df = pd.read_csv(CSV_PATH)
 
     dataset = {}
     for k in ['train_cat', 'train_dog', 'test_cat', 'test_dog']:
@@ -147,5 +145,4 @@ def load_dataset(dataframe):
     return dataset
 
 
-df = pd.read_csv(CSV_PATH)
-dataset = load_dataset(df)
+
