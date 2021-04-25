@@ -122,27 +122,28 @@ def load_dataset():
     '''
     df = pd.read_csv(CSV_PATH)
 
-    dataset = {}
+
+    rows = []
     for k in ['train_cat', 'train_dog', 'test_cat', 'test_dog']:
         v = list(df[k].dropna())
-        v = read_wav_files(v)
-        v = np.concatenate(v).astype('float32')
-
+        v = read_wav_files(v) #V is a list of np arrays of data
+        #v = np.concatenate(v).astype('float32')
+        print(v[0])
         # Compute mean and variance
-        if k == 'train_cat':
-            dog_std = dog_mean = 0
-            cat_std, cat_mean = v.std(), v.mean()
-        elif k == 'train_dog':
-            dog_std, dog_mean = v.std(), v.mean()
+        type = None
+        if k == 'train_cat' or k=="test_cat":
+            type = "Cat"
+        elif k == 'train_dog' or k=="test_dog":
+            type = "Dog"
+        for data in v:
+            row = {"type": type, "mean": np.mean(np.int32(data)), "range": np.max(np.int32(data))-np.min(np.int32(data)), "data": data}
+            rows.append(row)
 
-        # Mean and variance suppression
-        std, mean = (cat_std, cat_mean) if 'cat' in k else (dog_std, dog_mean)
-        v = (v - mean) / std
-        dataset[k] = v
 
-        print('loaded {} with {} sec of audio'.format(k, len(v) / 16000))
-
+    dataset = pd.DataFrame(rows)
     return dataset
 
 
 
+df = pd.read_csv(CSV_PATH)
+dataset = load_dataset()
