@@ -21,6 +21,7 @@ def main():
     else:
         print("Csv file of processed wav files was not found, this might take awhile...")
         # Utils.py will process data in cats_dogs according to train_test_split.csv
+        print(pd.read_csv('train_test_split.csv'))
         df = utils.load_dataset()
         df.to_csv(sound_csv)
 
@@ -37,7 +38,7 @@ def main():
     librosa.display.waveplot(test, sr=sr, alpha=0.4)
     plt.plot(t, sk.preprocessing.minmax_scale(spectral_centroids, axis=0), color='r')
     #plt.show()
-
+    
     #Mel Cepstral
     mfccs = librosa.feature.mfcc(test, sr=sr)
     print(mfccs.shape)
