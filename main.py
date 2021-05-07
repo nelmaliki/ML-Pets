@@ -52,7 +52,18 @@ def main():
     pred = model.predict(x_test)
     print_stats(y_test, pred)
 
-    #Todo: Lasso to determine useful Mel coefficients
+
+    #Lots of predictors so prune pretty aggressively
+    model = sk.linear_model.Lasso(.67).fit(x_train,y_train)
+    pred = model.predict(x_test)
+    print_stats(y_test, pred)
+    best_predictors = []
+    for coef_ind in range(len(model.coef_)):
+        if model.coef_[coef_ind] != 0:
+            best_predictors.append(predictor[coef_ind])
+    print("Best predictors = ", best_predictors)
+
+
 
 def print_stats(y_test, pred):
     cm = sk.metrics.confusion_matrix(y_test, np.round(pred), labels=[0, 1])
