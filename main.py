@@ -1,4 +1,4 @@
-import utils
+import utils as utils
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,21 +13,14 @@ sound_csv = "noise_numbers.csv"
 
 
 def main():
-    df = None
-    #Sound_csv file is a csv with the processed audio data
-    if os.path.isfile(sound_csv):
-        df = pd.read_csv(sound_csv)
-    #If we dont have that data we will have to generate it
-    else:
-        print("Csv file of processed wav files was not found, this might take awhile...")
-        # Utils.py will process data in cats_dogs according to train_test_split.csv
-        print(pd.read_csv('train_test_split.csv'))
-        df = utils.load_dataset()
-        df.to_csv(sound_csv)
+    df = utils.get_dataframe()
 
     #Testing file access from df
     test, sr = librosa.load(df.loc[4,"file"])
 
+    # Check albels are correct
+    print(df["label"])
+    
     #Getting Spectral_Centroids
     spectral_centroids = librosa.feature.spectral_centroid(test, sr=sr)[0]
     print(spectral_centroids.shape)  # Computing the time variable for visualization
@@ -45,21 +38,18 @@ def main():
     librosa.display.specshow(mfccs, sr=sr, x_axis='time')
     #plt.show()
 
-
     #Lets try fitting a model with this stuff
-    df["type"].replace(to_replace=["Dog", "Cat"], value=[0.0, 1.0], inplace=True)
+    predictor = ["spectral"]
+    
+    predictor.extend(["mfccs_" + str(i) for i in range(20)])
+    predictor.extend(["mfcc_deltas_" + str(i) for i in range(20)])
+
     x_train, x_test, y_train, y_test = sk.model_selection.train_test_split(
-        df.drop(["type"], axis=1), df[["type"]], test_size=0.3)
+       df[predictor], df["label"].values, test_size=0.3)
+        
 
-
-
-    train_spectral_centroids = np.asarray([np.mean(librosa.feature.spectral_centroid(test, sr=sr)[0]) for test, sr in [librosa.load(file) for file in x_train["file"]]]).reshape(-1,1)
-
-    test_spectral_centroids = np.asarray([np.mean(librosa.feature.spectral_centroid(test, sr=sr)[0]) for test, sr in [librosa.load(file) for file in x_test["file"]]]).reshape(-1,1)
-
-
-    model = sk.linear_model.LogisticRegression().fit(train_spectral_centroids,y_train)
-    pred = model.predict(test_spectral_centroids)
+    model = sk.linear_model.LogisticRegression().fit(x_train,y_train)
+    pred = model.predict(x_test)
     print_stats(y_test, pred)
 
     #Todo: Lasso to determine useful Mel coefficients
