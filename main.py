@@ -8,7 +8,6 @@ import librosa
 import sklearn as sk
 import librosa.display
 
-
 sound_csv = "noise_numbers.csv"
 
 
@@ -30,7 +29,7 @@ def main():
     # Plotting the Spectral Centroid along the waveform
     librosa.display.waveplot(test, sr=sr, alpha=0.4)
     plt.plot(t, sk.preprocessing.minmax_scale(spectral_centroids, axis=0), color='r')
-    #plt.show()
+    plt.show()
     
     #Mel Cepstral
     mfccs = librosa.feature.mfcc(test, sr=sr)
@@ -63,7 +62,15 @@ def main():
             best_predictors.append(predictor[coef_ind])
     print("Best predictors = ", best_predictors)
 
-
+    # Try clustering
+    X = df[predictor]
+    pca = sk.decomposition.PCA(n_components = 2, svd_solver='full')
+    pca.fit(X)
+    Xa = pca.transform(X)
+    plt.plot(Xa[:,0],Xa[:,1],'.')
+    plt.xlabel('PCA 1')
+    plt.ylabel('PCA 2')
+    plt.show()
 
 def print_stats(y_test, pred):
     cm = sk.metrics.confusion_matrix(y_test, np.round(pred), labels=[0, 1])
