@@ -7,6 +7,7 @@ import os
 import librosa
 import sklearn as sk
 import librosa.display
+import sklearn.ensemble
 
 sound_csv = "noise_numbers.csv"
 
@@ -29,7 +30,7 @@ def main():
     # Plotting the Spectral Centroid along the waveform
     librosa.display.waveplot(test, sr=sr, alpha=0.4)
     plt.plot(t, sk.preprocessing.minmax_scale(spectral_centroids, axis=0), color='r')
-    plt.show()
+    #plt.show()
     
     #Mel Cepstral
     mfccs = librosa.feature.mfcc(test, sr=sr)
@@ -71,6 +72,25 @@ def main():
     plt.xlabel('PCA 1')
     plt.ylabel('PCA 2')
     plt.show()
+
+    #Random Forest Classifier
+    score_list = []
+    best_score = 0
+    for i in range (1,21):
+        model = sk.ensemble.RandomForestClassifier(n_estimators=i*10)
+        fit = model.fit(x_train, y_train)
+        pred = model.predict(x_test)
+        score = sk.metrics.accuracy_score(y_test, np.round(pred))
+        score_list.append(score)
+        best_score = max(best_score, score)
+
+    print("Best score: ", best_score)
+    plt.plot([i*10 for i in range(1,21)], score_list)
+    plt.xlabel("n_estimators")
+    plt.ylabel("Accuracy Score")
+    plt.title("Random Forest Classifier n_estimators")
+    plt.show()
+
 
 def print_stats(y_test, pred):
     cm = sk.metrics.confusion_matrix(y_test, np.round(pred), labels=[0, 1])
