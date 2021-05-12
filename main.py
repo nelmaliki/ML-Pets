@@ -90,14 +90,18 @@ def main():
 
     best_predictors = []
     best_score = 0
+    best_f1_score = 0
     score_list = []
     for i in range(0,100):
         #This is basically lasso but C = 1-alpha
         model = sk.linear_model.LogisticRegression(penalty="l1",C=1-i/100, solver="liblinear")
-        score = np.mean(sk.model_selection.cross_val_score(model, x, y, cv=kfold,
+        f1_score = np.mean(sk.model_selection.cross_val_score(model, x, y, cv=kfold,
                                                            scoring=sk.metrics.make_scorer(sk.metrics.f1_score)))
+        score = np.mean(sk.model_selection.cross_val_score(model, x, y, cv=kfold,
+                                                              scoring=sk.metrics.make_scorer(sk.metrics.accuracy_score)))
         score_list.append(score)
         model.fit(x,y)
+        best_f1_score = max(f1_score, best_f1_score)
         if score >= best_score:
             best_score = score
             best_predictors = []
@@ -105,7 +109,12 @@ def main():
             for coef_ind in range(len(coef)):
                 if coef[coef_ind] != 0:
                     best_predictors.append(predictor[coef_ind])
-    print("Best predictors = ", best_predictors)
+
+
+
+    model_f1_list.append(best_f1_score)
+    model_accuracy_list.append(best_score)
+
 
     plt.plot([i/100 for i in range(0,100)], score_list)
     plt.xlabel("Alpha")
@@ -115,21 +124,12 @@ def main():
 
 
 
-    # Using only the mfcc coefficients and its deltas
+    #USING SVM
+
     X = df[predictor]
-    mels = X.drop(columns=["spectral"])
-    y = df['label'].values
-    mels.drop(mels.iloc[:, 20:], inplace=True, axis=1)
-
-    deltas = X.drop(columns=['spectral'])
-    deltas.drop(deltas.iloc[:, 0:20], inplace=True, axis=1)
-
-    data = np.vstack((np.array(mels), np.array(deltas)))
-    mel_df = pd.DataFrame(data)
-    new_y = np.hstack((df['label'], df['label']))
 
     X_train, X_test, y_train, y_test = sk.model_selection.train_test_split(
-        mel_df.values, new_y, test_size=0.25, random_state=42)
+        X, y, test_size=0.25, random_state=42)
 
 
 
@@ -143,6 +143,11 @@ def main():
     # fitting the model for grid search
     grid.fit(X_train, y_train)
 
+    model_f1_list.append(np.mean(sk.model_selection.cross_val_score(model, x, y, cv=kfold,
+                                                              scoring=sk.metrics.make_scorer(sk.metrics.f1_score))))
+    model_accuracy_list.append(np.mean(sk.model_selection.cross_val_score(model, x, y, cv=kfold,
+                                                              scoring=sk.metrics.make_scorer(sk.metrics.accuracy_score))))
+
     # print best parameter after tuning
     print(grid.best_params_)
 
@@ -152,7 +157,7 @@ def main():
 
     #PCA
 
-    data2 = np.array(data)
+    """data2 = np.array(data)
 
     pca = Pipeline([('scaler', StandardScaler()),
                     ('clf', sk.decomposition.PCA(n_components=2, svd_solver='full', random_state=42))])
@@ -171,7 +176,7 @@ def main():
     plt.xlabel('PCA 1')
     plt.ylabel('PCA 2')
     plt.title('Clustering MFCCs and MFCC deltas (MinMax Scaler)')
-    plt.show()
+    plt.show()"""
 
 
     #Random Forest Classifier
@@ -180,21 +185,24 @@ def main():
     best_score = 0
     for i in range(1, 11):
         model = sk.ensemble.RandomForestClassifier(n_estimators=i * 10)
-        score = np.mean(sk.model_selection.cross_val_score(model,x,y,cv=kfold,scoring=sk.metrics.make_scorer(sk.metrics.f1_score)))
+        score = np.mean(sk.model_selection.cross_val_score(model,x,y,cv=kfold,scoring=sk.metrics.make_scorer(sk.metrics.accuracy_score)))
         score_list_all_predictors.append(score)
         best_score = max(best_score, score)
 
     score_list = []
     best_score = 0
     best_x = x[best_predictors]
-
+    best_f1_score = 0
     for i in range (1,11):
         model = sk.ensemble.RandomForestClassifier(n_estimators=i*10)
-        print(sk.model_selection.cross_val_score(model,best_x,y,cv=kfold,scoring=sk.metrics.make_scorer(sk.metrics.f1_score, average='weighted',zero_division=1)))
-        score = np.mean(sk.model_selection.cross_val_score(model,best_x,y,cv=kfold,scoring=sk.metrics.make_scorer(sk.metrics.f1_score, zero_division=1)))
+        score = np.mean(sk.model_selection.cross_val_score(model,best_x,y,cv=kfold,scoring=sk.metrics.make_scorer(sk.metrics.accuracy_score)))
+        f1_score = np.mean(sk.model_selection.cross_val_score(model,best_x,y,cv=kfold,scoring=sk.metrics.make_scorer(sk.metrics.f1_score, zero_division=1)))
+        best_f1_score = max(f1_score, best_f1_score)
         score_list.append(score)
         best_score = max(best_score, score)
 
+    model_accuracy_list.append(best_score)
+    model_f1_list.append(best_f1_score)
 
     plt.plot([i*10 for i in range(1,11)], score_list)
     plt.plot([i * 10 for i in range(1, 11)], score_list_all_predictors)
@@ -204,6 +212,24 @@ def main():
     plt.title("Random Forest Classifier n_estimators")
     plt.show()
 
+    #PRint comparison between models:
+
+    print("Accuracy", model_accuracy_list)
+    print("F1 Scores", model_f1_list)
+    
+    models = ['Lasso', 'SVM', 'Random Forests']
+    plt.bar(models, model_accuracy_list)
+    plt.xlabel("Model Type")
+    plt.ylabel("Accuracy")
+    plt.title("Model Accuracy Comparison")
+    plt.show()
+
+
+    plt.bar(models, model_f1_list)
+    plt.xlabel("Model Type")
+    plt.ylabel("F1 Score")
+    plt.title("Model F1 Comparison")
+    plt.show()
 
 def print_stats(y_test, pred):
     cm = sk.metrics.confusion_matrix(y_test, np.round(pred), labels=[0, 1])
